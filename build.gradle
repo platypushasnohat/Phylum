@@ -1,0 +1,113 @@
+buildscript {
+    repositories {
+        maven { url = "https://files.minecraftforge.net/maven" }
+        maven { url = "https://repo.spongepowered.org/repository/maven-public/" }
+    }
+    dependencies {
+        classpath group: "net.minecraftforge.gradle", name: "ForgeGradle", version: "5.1.+", changing: true
+        classpath group: "org.spongepowered", name: "mixingradle", version: "0.7-SNAPSHOT"
+    }
+}
+
+apply plugin: "net.minecraftforge.gradle"
+apply plugin: "eclipse"
+apply plugin: "idea"
+apply plugin: "maven-publish"
+apply plugin: "org.spongepowered.mixin"
+
+mixin {
+    add sourceSets.main, "${modId}.refmap.json"
+}
+
+version = "${minecraft}-${modVersion}"
+group = "com.platypushasnohat"
+archivesBaseName = "${modSlug}"
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+minecraft {
+    mappings channel: "official", version: project.minecraft
+    accessTransformer = file("src/main/resources/META-INF/accesstransformer.cfg")
+    runs {
+        client {
+            workingDirectory file("run")
+            property "forge.logging.markers", "SCAN,REGISTRIES,REGISTRYDUMP"
+            property "forge.logging.console.level", "debug"
+            property "mixin.env.remapRefMap", "true"
+            property "mixin.env.refMapRemappingFile", "${projectDir}/build/createSrgToMcp/output.srg"
+            arg "-mixin.config=" + modId + ".mixins.json"
+            mods {
+                "${modId}" {
+                    source sourceSets.main
+                }
+            }
+        }
+        server {
+            workingDirectory file("run")
+            property "forge.logging.markers", "SCAN,REGISTRIES,REGISTRYDUMP"
+            property "forge.logging.console.level", "debug"
+            property "mixin.env.remapRefMap", "true"
+            property "mixin.env.refMapRemappingFile", "${projectDir}/build/createSrgToMcp/output.srg"
+            arg "-mixin.config=" + modId + ".mixins.json"
+            mods {
+                "${modId}" {
+                    source sourceSets.main
+                }
+            }
+        }
+        data {
+            workingDirectory file("run")
+            property "forge.logging.markers", "SCAN,REGISTRIES,REGISTRYDUMP"
+            property "forge.logging.console.level", "debug"
+            property "mixin.env.remapRefMap", "true"
+            property "mixin.env.refMapRemappingFile", "${projectDir}/build/createSrgToMcp/output.srg"
+            args "--mod", modId, "--all", "--output", file("src/generated/resources/"), "--existing", file("src/main/resources")
+            mods {
+                "${modId}" {
+                    source sourceSets.main
+                }
+            }
+        }
+    }
+}
+
+sourceSets.main.resources {
+    srcDir "src/generated/resources"
+}
+
+dependencies {
+    minecraft "net.minecraftforge:forge:${minecraft}-${forge}"
+
+    compileOnly fg.deobf("mezz.jei:jei-${minecraft}-common-api:${jei}")
+    compileOnly fg.deobf("mezz.jei:jei-${minecraft}-forge-api:${jei}")
+    runtimeOnly fg.deobf("mezz.jei:jei-${minecraft}-forge:${jei}")
+
+    annotationProcessor "org.spongepowered:mixin:0.8.5:processor"
+}
+
+repositories {
+    maven { url "https://www.cursemaven.com" }
+    maven { url "https://modmaven.k-4u.nl" }
+}
+
+jar {
+    manifest {
+        attributes([
+                "Specification-Title"     : modName,
+                "Specification-Vendor"    : authors,
+                "Specification-Version"   : "1",
+                "Implementation-Title"    : modName,
+                "Implementation-Version"  : modVersion,
+                "Implementation-Vendor"   : authors,
+                "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
+                "MixinConfigs"            : "template_mod.mixins.json"
+        ])
+    }
+}
+
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
+}
